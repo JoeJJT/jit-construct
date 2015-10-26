@@ -5,7 +5,7 @@ BIN = interpreter \
 CROSS_COMPILE = arm-linux-gnueabihf-
 QEMU_ARM = qemu-arm -L /usr/arm-linux-gnueabihf
 LUA = lua
-
+PERF_STAT = cycles,instructions,cache-misses
 all: $(BIN)
 
 CFLAGS = -Wall -Werror -std=gnu99 -I.
@@ -57,7 +57,7 @@ jit-arm: dynasm-driver.c jit-arm.h
 jit-arm.h: jit-arm.dasc
 	$(LUA) dynasm/dynasm.lua -o $@ jit-arm.dasc
 run-jit-arm: jit-arm
-	$(QEMU_ARM) jit-arm progs/hello.b && \
+	$(QEMU_ARM) jit-arm progs/mandelbrot.b && \
 	$(CROSS_COMPILE)objdump -D -b binary -marm /tmp/jitcode
 
 bench-jit-x64: jit-x64
@@ -73,6 +73,10 @@ test: test_stack jit0-x64 jit0-arm
 
 test_stack: tests/test_stack.c
 	$(CC) $(CFLAGS) -o $@ $^
+
+perf-stat:
+	perf stat -r 1 -e $(PERF_STAT) ./interpreter ./progs/mandelbrot.b
+
 
 clean:
 	$(RM) $(BIN) \

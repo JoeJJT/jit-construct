@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 	for (char *p = read_file(argv[1]); *p; p++) {
 		switch (*p) {
 		case '>':
+			
 			|  inc  PTR
 			break;
 		case '<':
