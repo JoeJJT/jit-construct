@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
                 }
                 if( *(p+1) == '>' && *(p+2) == '+' && *(p+3) == '<' && *(p+4) == '-' && *(p+5) == ']') {
                     p+=5;
+                    break;
                 }
 
                 maxpc += 2;     // add two labels

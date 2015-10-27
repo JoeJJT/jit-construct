@@ -8,7 +8,7 @@ LUA = lua
 PERF_STAT = cycles,instructions,cache-misses
 all: $(BIN)
 
-CFLAGS = -Wall -Werror -std=gnu99 -I.
+CFLAGS = -Wall -g -Werror -std=gnu99 -I.
 
 interpreter: interpreter.c
 	$(CC) $(CFLAGS) -o $@ $^
