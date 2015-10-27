@@ -8,7 +8,8 @@ LUA = lua
 PERF_STAT = cycles,instructions,cache-misses
 all: $(BIN)
 
-CFLAGS = -Wall -g -Werror -std=gnu99 -I.
+CFLAGS = -Wall -g -std=gnu99 -I.
+#-Werror -std=gnu99 -I.
 
 interpreter: interpreter.c
 	$(CC) $(CFLAGS) -o $@ $^
@@ -73,7 +74,8 @@ test: test_stack jit0-x64 jit0-arm
 
 test_stack: tests/test_stack.c
 	$(CC) $(CFLAGS) -o $@ $^
-perf_stat: perf stat -r 1 -e $(PERF_STAT) ./interpreter ./progs/mandelbrot.b
+perf_stat:
+	perf stat -r 1 -e $(PERF_STAT) ./interpreter ./progs/mandelbrot.b
 clean:
 	$(RM) $(BIN) \
 	      hello-x86 hello-x64 hello-arm hello.s \
