@@ -21,9 +21,12 @@
 
 #define Dst &state
 #define MAX_NESTING 256
-int samePattern(char *p);
-int zeroLoop(char *p);
-int moveLoop(char *p);
+#define true 1
+#define false 0
+//int samePattern(char **p);
+//int zeroLoop(char **p);
+//int moveLoop(char **p);
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) err("Usage: jit-x64 <inputfile>");
@@ -41,41 +44,37 @@ int main(int argc, char *argv[])
     for (char *p = read_file(argv[1]); *p; p++) {
         switch (*p) {
             case '>':
-                count = samePattern(p);
-                if(count > 1) {
-                    | add PTR ,count
-                } else {
+                count = samePattern(&p);
+                p += count-1;
+                if(count == 1)
                     | inc PTR
-                }
-                p = p + (count -1);
-                break;
+                    else
+                        | add PTR ,count
+                        break;
             case '<':
-                count = samePattern(p);
-                if(count > 1) {
-                    | sub PTR,count
-                } else {
-                    |  dec  PTR
-                }
-                p = p + (count -1);
-                break;
+                count = samePattern(&p);
+                p += count -1;
+                if(count == 1)
+                    | dec PTR
+                    else
+                        | sub PTR ,count
+                        break;
             case '+':
-                count = samePattern(p);
-                if(count > 1) {
-                    | add byte[PTR] ,count
-                } else {
-                    |  inc  byte [PTR]
-                }
-                p = p + (count -1);
-                break;
+                count = samePattern(&p);
+                p += count-1;
+                if(count == 1)
+                    | inc byte[PTR]
+                    else
+                        | add byte[PTR] ,count
+                        break;
             case '-':
-                count = samePattern(p);
-                if(count > 1) {
-                    | sub byte[PTR] ,count
-                } else {
-                    |  dec  byte [PTR]
-                }
-                p = p + (count -1);
-                break;
+                count = samePattern(&p);
+                p += count-1;
+                if(count == 1)
+                    | dec byte[PTR]
+                    else
+                        | sub byte[PTR] ,count
+                        break;
             case '.':
                 |  movzx edi, byte [PTR]
                 |  callp putchar
@@ -85,18 +84,20 @@ int main(int argc, char *argv[])
                 |  mov   byte [PTR], al
                 break;
             case '[':
+                if(zeroLoop(&p)) {
+                    | mov byte[PTR], 0
+                    p = p + 2;
+                }
+                if(moveLoop(&p)) {
+                    | mov cl, byte[PTR]
+                    | add byte [PTR+1],cl
+                    | mov byte[PTR],0
+                    p = p + 5;
+                }
                 if (top == limit) err("Nesting too deep.");
                 // Each loop gets two pclabels: at the beginning and end.
                 // We store pclabel offsets in a stack to link the loop
                 // begin and end together.
-                int zero = zeroLoop(p);
-                int move = moveLoop(p);
-                if(zero) {
-                    p = p + 2;
-                }
-                if(move) {
-                    p = p + 5;
-                }
                 maxpc += 2;
                 *top++ = maxpc;
                 dasm_growpc(&state, maxpc);
@@ -127,38 +128,36 @@ int main(int argc, char *argv[])
     }
 
 
-    int samePattern(char *p)
+    int samePattern(char **p)
 {
-    char operator = *p;
+    char operator = **p;
     int same_count = 0;
-    while(*p) {
-        if(*p == operator) {
-            same_count++;
-        } else {
-            break;
-        }
-        p++;
+    while(**p == operator) {
+        (*p)++;
+        same_count++;
     }
     return same_count;
 }
 
-
-int zeroLoop(char *p)
+int zeroLoop(char **p)
 {
-    if(*(p+1) == '-') {
-        if(*(p+2) == ']') {
-            return 1;
+//	char *old_p = *p;
+    if(**(p+1) == '-') {
+        if(**(p+2) == ']') {
+            return true;
         }
     }
-    return 0;
+    printf("123");
+//	*p = old_p;
+    return false;
 }
 
-int moveLoop(char *p)
+int moveLoop(char **p)
 {
-    if(*(p+1) == '>' && *(p+2) == '+' && *(p+3) == '<' && *(p+4) == '-' && *(p+5) == ']') {
-        return 1;
-    } else if(*(p+1) == '-' && *(p+2) == '>' && *(p+3) == '+' &&*(p+4) == '<' && *(p+5) == ']') {
-        return 1;
+    if(**(p+1) == '>' && **(p+2) == '+' && **(p+3) == '<' && **(p+4) == '-' && **(p+5) == ']') {
+        return true;
+    } else if(**(p+1) == '-' && **(p+2) == '>' && **(p+3) == '+' && **(p+4) == '<' && **(p+5) == ']') {
+        return true;
     }
-    return 0;
+    return false;
 }

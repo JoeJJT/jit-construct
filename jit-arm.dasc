@@ -35,44 +35,49 @@ int main(int argc, char *argv[])
     unsigned int maxpc = 0;
     int pcstack[MAX_NESTING];
     int *top = pcstack, *limit = pcstack + MAX_NESTING;
-
+    FILE *fp = fopen("test.txt","a");
 
     clock_gettime(CLOCK_REALTIME, &start);
     // Function prologue.
-    |  push {PTR, r5, r7, lr}
+    |  push {PTR, r5, r6, r7, lr}
     |  mov  PTR, r0
-    int count = 1;
+    int count;
     for (char *p = read_file(argv[1]); *p; p++) {
         switch (*p) {
             case '>':
+                count = 1;
                 while(*(++p) == '>') {
                     count++;
                 }
-                --p;
-                |  add  PTR, PTR, #1
+                p--;
+                |  add  PTR, PTR, #count
                 break;
             case '<':
+                count = 1;
                 while(*(++p) == '<') {
                     count++;
                 }
-                --p;
-                |  sub  PTR, PTR, #1
+                p--;
+                |  sub  PTR, PTR, #count
                 break;
             case '+':
+                count = 1;
                 while(*(++p) == '+') {
                     count++;
                 }
+                p--;
                 |  ldrb  r5, [PTR]
-                |  add   r5, r5, #1
+                |  add   r5, r5, #count
                 |  strb  r5, [PTR]
                 break;
             case '-':
+                count = 1;
                 while(*(++p) == '-') {
                     count++;
                 }
-                --p;
+                p--;
                 |  ldrb  r5, [PTR]
-                |  sub   r5, r5, #1
+                |  sub   r5, r5, #count
                 |  strb  r5, [PTR]
                 break;
             case '.':
@@ -95,13 +100,31 @@ int main(int argc, char *argv[])
                 // We store pclabel offsets in a stack to link the loop
                 // begin and end together.
                 if ( *(p+1) == '-' && *(p+2) == ']') {
-                    p+=2;
+                    p += 2;
+                    | ldrb r5, [PTR]
+                    | mov r5, #0
+                    | strb r5, [PTR]
                     break;
-                }
+                }/*
                 if( *(p+1) == '>' && *(p+2) == '+' && *(p+3) == '<' && *(p+4) == '-' && *(p+5) == ']') {
-                    p+=5;
+                    p += 5;
+                    | ldrb r5, [PTR]
+                    | ldrb r6 ,[PTR, #1]
+                    | add r6, r5, r6
+                    | strb r6, [PTR, #1]
+                    | mov r5 , #0
+                    | strb r5, [PTR]
                     break;
-                }
+                }*/
+				if( *(p+1) == '-' && *(p+2) == '>' && *(p+3) == '+' && *(p+4) == '<' && *(p+5) == ']') {
+					p += 5;
+					| ldrb r5, [PTR]
+					| ldrb r6, [PTR, #1]
+					| add r5, r5, r6
+					| strb r5, [PTR]
+					| mov r6, #0
+					| strb r6, [PTR, #1]
+				}
 
                 maxpc += 2;     // add two labels
                 *top++ = maxpc;
@@ -123,7 +146,7 @@ int main(int argc, char *argv[])
         }
 
         // Function epilogue.
-        |  pop  {PTR, r5, r7, pc}
+        |  pop  {PTR, r5, r6, r7, pc}
 
         void (*fptr)(char*) = jitcode(&state);
         char *mem = calloc(30000, 1);
@@ -132,6 +155,7 @@ int main(int argc, char *argv[])
         free_jitcode(fptr);
         clock_gettime(CLOCK_REALTIME, &end);
         cpu_time = diff_in_second(start,end);
-        printf("execution time : %1f sec\n", cpu_time);
+        fprintf(fp,"execution time : %1f sec\n", cpu_time);
+        fclose(fp);
         return 0;
     }
